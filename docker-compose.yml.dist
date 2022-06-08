@@ -1,0 +1,62 @@
+version: '3.5'
+
+services:
+  example-web:
+    container_name: example-web
+    build:
+      context: ./docker/nginx
+      args:
+        UID: $U_ID
+    ports:
+      - '8000:80'
+    volumes:
+      - ./public:/appdata/www/public
+    depends_on:
+      - example-app
+    networks:
+      - example-network
+
+  example-app:
+    container_name: example-app
+    build:
+      context: ./docker/php
+      args:
+        UID: $U_ID
+    volumes:
+      - ./:/appdata/www
+    ###> XDEBUG 3 ###
+    # Use your client IP here
+    # Linux: run "ip a | grep docker0"
+    # Windows (with WSL2): Run "grep nameserver /etc/resolv.conf  | cut -d ' ' -f2"
+    # MacOS: host.docker.internal
+    ###< XDEBUG 3 ###
+    environment:
+      XDEBUG_CLIENT_HOST: 172.17.0.1
+      XDEBUG_CLIENT_PORT: 9003
+      PHP_IDE_CONFIG: serverName=example-server
+      # PHP_CS_FIXER_IGNORE_ENV: 1
+    networks:
+      - example-network
+    depends_on:
+      - example-mysql
+
+  example-mysql:
+    container_name: example-mysql
+    build: 
+      context: ./docker/database
+    ports:
+      - '3336:3306'
+    environment:
+      MYSQL_DATABASE: example_db
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - example-mysql-data:/var/lib/mysql
+    networks:
+      - example-network
+    command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+
+networks:
+  example-network:
+
+volumes:
+  example-mysql-data:
